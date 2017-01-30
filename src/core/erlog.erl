@@ -74,13 +74,19 @@ init(Params) -> % use custom database implementation
              end,
   {ok, #state{db_state = UdbState2, f_consulter = FileCon, e_man = EventMan, debugger = Debugger, libs_dir = LibsDir}}.
 
-handle_call({execute, Command}, _From, State) -> %running prolog code in normal mode
+handle_call({execute, Command}, _From, State) when is_list(Command) -> %running prolog code in normal mode
   {Res, _} = Repl = case erlog_scan:tokens([], Command, 1) of
                       {done, Result, _Rest} -> run_command(Result, State); % command is finished, run.
                       {more, _} -> {{ok, more}, State} % unfinished command. Report it and do nothing.
                     end,
   NewState = change_state(Repl),
   {reply, Res, NewState};
+
+handle_call({execute, Command}, _From, State) ->
+  {Res, _} = Repl = run_command(Command, State),
+  NewState = change_state(Repl),
+  {reply, Res, NewState};
+
 handle_call({select, Command}, _From, State) ->  %in selection solutions mode
   {Res, _} = Repl = preprocess_command({select, Command}, State),
   NewState = change_state(Repl), % change state, depending on reply
